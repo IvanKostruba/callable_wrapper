@@ -104,7 +104,8 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -128,13 +129,25 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="ActiveObject.cpp" />
+    <ClCompile Include="ActiveObjectAsync.cpp" />
+    <ClCompile Include="ActiveObjectCoroutines.cpp" />
+    <ClCompile Include="PromptFetcher.cpp" />
     <ClCompile Include="test.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ActiveObject.h" />
+    <ClInclude Include="ActiveObjectAsync.h" />
+    <ClInclude Include="ActiveObjectCoroutines.h" />
+    <ClInclude Include="CoroutineTask.h" />
+    <ClInclude Include="CtorLogger.h" />
     <ClInclude Include="FlexibleTask.h" />
-    <ClInclude Include="TaskWrapper.h" />
+    <ClInclude Include="InputStruct.h" />
+    <ClInclude Include="PromptFetcher.h" />
     <ClInclude Include="SimpleTask.h" />
-    <ClInclude Include="TaskWrapperComplete.h" />
+    <ClInclude Include="TaskWrapper.h" />
+    <ClInclude Include="TaskWrapperParameterized.h" />
+    <ClInclude Include="WorkerThread.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

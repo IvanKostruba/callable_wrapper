@@ -1,69 +1,134 @@
 #include <functional>
 #include <iostream>
 #include <queue>
+#include <string>
 
+#include "InputStruct.h"
 #include "SimpleTask.h"
 #include "FlexibleTask.h"
 #include "TaskWrapper.h"
-#include "TaskWrapperComplete.h"
+#include "CtorLogger.h"
+#include "ActiveObject.h"
+#include "ActiveObjectCoroutines.h"
+#include "ActiveObjectAsync.h"
+#include "PromptFetcher.h"
 
 
-class SimpleTaskHandler {
-public:
-
-	struct Data {
-		float k;
-		float x;
-		float b;
-	};
-
-	void process(const Data& data) {
-		double result = data.k * data.x + data.b;
-	}
-};
-
-
-class TaskHandler {
+class TaskHandlerWithArbitraryMethodName {
 public:
 	void foo(float k, float x, float b) {
 		double result = k * x + b;
 	}
 };
 
-void SimpleTaskTest()
+
+int main(int argc, char** argv) {
+
+	// See, how task is created and copied/moved with the wrapper.
+	{
+		std::cout << "\nComplete wrapper:\n";
+		std::cout << "Create and call:\n";
+		TaskWrapper wrap{ CtorLogger{} };
+		wrap();
+		std::cout << "\nMake a copy and call:\n";
+		TaskWrapper wrap2{ wrap };
+		wrap2();
+		std::cout << "\nMove and call:\n";
+		TaskWrapper wrap3{ std::move(wrap) };
+		wrap3();
+		std::cout << "\nEverything goes out of the scope and is destroyed:\n";
+	}
+
+	VoiceMenuHandler menuHandler;
+	std::thread sender([&menuHandler]() {
+		menuHandler.receiveInput(
+			MenuInput{ '2', "call_1@ip_addr" });
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		menuHandler.receiveInput(
+			MenuInput{ '1', "call_2@ip_addr" });
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		menuHandler.receiveHangup(
+			HangUp{ "call_1@ip_addr" });
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	});
+	sender.join();
+
+
+	std::cout << "\n";
+	VoiceMenuHandlerCoroutines menuHandlerCoroutines;
+	std::thread senderToCoroutines([&menuHandlerCoroutines]() {
+		menuHandlerCoroutines.receiveInput(
+			MenuInput{ '5', "call_coro_3@ip_addr" });
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		menuHandlerCoroutines.receiveInput(
+			MenuInput{ '4', "call_coro_4@ip_addr" });
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		menuHandlerCoroutines.receiveHangup(
+			HangUp{ "call_coro_3@ip_addr" });
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	});
+	senderToCoroutines.join();
+
+	std::cout << "\n";
+	PromptFetcher fetcher;
+	VoiceMenuHandlerAsync menuHandlerAsync{ fetcher };
+	std::thread senderToAsync([&menuHandlerAsync, &fetcher]() {
+		menuHandlerAsync.receiveInput(
+			MenuInput{ '7', "call_async_9@ip_addr" });
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		menuHandlerAsync.receiveInput(
+			MenuInput{ '8', "call_async_8@ip_addr" });
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		// Play the prompt on the fetcher worker thread.
+		fetcher.processResponse("call_async_8@ip_addr", "prompt_AAA");
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		// Play the prompt on the fetcher worker thread.
+		fetcher.processResponse("call_async_9@ip_addr", "prompt_BBB");
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		menuHandlerAsync.receiveHangup(
+			HangUp{ "call_async_8@ip_addr" });
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		});
+	senderToAsync.join();
+
+	return 0;
+}
+
+// PERFORMANCE BENCHMARK SNIPPETS, see 
+
+//void SimpleTaskTest()
+//{
+//	VoiceMenuHandler handler;
+//	std::queue<TaskWrapper> queue;
+//	for (int i = 0; i < 1000; ++i) {
+//		queue.push(SimpleTask{ &handler, VoiceMenuHandler::MenuInput{'3', "call_1@ip_addr"} });
+//	}
+//	while (!queue.empty()) {
+//		queue.front()();
+//		queue.pop();
+//	}
+//}
+
+void FlexibleTaskTest()
 {
-	SimpleTaskHandler handler;
+	TaskHandlerWithArbitraryMethodName handler;
 	std::queue<TaskWrapper> queue;
 	for (int i = 0; i < 1000; ++i) {
-		queue.push(SimpleTask{ &handler, SimpleTaskHandler::Data{0.3f, 1.4f * i, 33.7f} });
+		queue.push(FlexibleTask{ &TaskHandlerWithArbitraryMethodName::foo, &handler, 0.3f, 1.4f * i, 33.7f });
 	}
 	while (!queue.empty()) {
 		queue.front()();
 		queue.pop();
 	}
 }
-
-
-void TaskTest()
-{
-	TaskHandler handler;
-	std::queue<TaskWrapper> queue;
-	for (int i = 0; i < 1000; ++i) {
-		queue.push(Task{ &TaskHandler::foo, &handler, 0.3f, 1.4f * i, 33.7f });
-	}
-	while (!queue.empty()) {
-		queue.front()();
-		queue.pop();
-	}
-}
-
 
 void TaskCompleteWrapperTest()
 {
-	TaskHandler handler;
-	std::queue<TaskWrapperComplete> queue;
+	TaskHandlerWithArbitraryMethodName handler;
+	std::queue<TaskWrapper> queue;
 	for (int i = 0; i < 1000; ++i) {
-		queue.push(Task{ &TaskHandler::foo, &handler, 0.3f, 1.4f * i, 33.7f });
+		queue.push(FlexibleTask{ &TaskHandlerWithArbitraryMethodName::foo, &handler, 0.3f, 1.4f * i, 33.7f });
 	}
 	while (!queue.empty()) {
 		queue.front()();
@@ -71,9 +136,8 @@ void TaskCompleteWrapperTest()
 	}
 }
 
-
 void StdFunctionTest() {
-	TaskHandler handler;
+	TaskHandlerWithArbitraryMethodName handler;
 	std::queue<std::function<void()>> queue;
 	float k{ 0.3f };
 	float b{ 33.7f };
@@ -85,80 +149,4 @@ void StdFunctionTest() {
 		queue.front()();
 		queue.pop();
 	}
-}
-
-
-class Functor {
-public:
-	Functor() {
-		std::cout << "Ctor\n";
-	}
-
-	Functor(const Functor& other) {
-		std::cout << "Copy ctor\n";
-	}
-
-	Functor(Functor&& other) noexcept {
-		std::cout << "Move ctor\n";
-	}
-
-	Functor& operator=(const Functor& other) {
-		std::cout << "Assign copy\n";
-	}
-
-	Functor& operator=(Functor&& other) noexcept {
-		std::cout << "Assign move\n";
-	}
-
-	~Functor() {
-		std::cout << "Dtor\n";
-	}
-
-	void operator()() {
-		std::cout << "operator()\n";
-	}
-};
-
-
-int main(int argc, char** argv) {
-	SimpleTaskHandler handler;
-	auto tsk = SimpleTask{ &handler, SimpleTaskHandler::Data{0.3f, 1.4f, 33.7f} };
-	tsk();
-
-	TaskHandler t;
-	auto tsk2 = Task{ &TaskHandler::foo, &t, 0.3f, 1.4f, 33.7f };
-	tsk2();
-
-	std::queue<TaskWrapper> taskQueue;
-	taskQueue.push(TaskWrapper{ tsk });
-	taskQueue.push(TaskWrapper{ tsk2 });
-	taskQueue.front()();
-	taskQueue.pop();
-	taskQueue.front()();
-	taskQueue.pop();
-	taskQueue.push([&tsk]() { tsk(); }); // Works with anything with the right method!
-	taskQueue.front()();
-	taskQueue.pop();
-
-	{
-		std::cout << "Primitive wrapper:\n";
-		TaskWrapper wrap{ Functor{} };
-		wrap();
-		TaskWrapper wrap2{ wrap };
-		wrap2();
-		TaskWrapper wrap3{ std::move(wrap) };
-		wrap3();
-	}
-
-	{
-		std::cout << "\nComplete wrapper:\n";
-		TaskWrapperComplete wrap{ Functor{} };
-		wrap();
-		TaskWrapperComplete wrap2{ wrap };
-		wrap2();
-		TaskWrapperComplete wrap3{ std::move(wrap) };
-		wrap3();
-	}
-
-	return 0;
 }

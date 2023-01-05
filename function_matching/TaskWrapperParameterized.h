@@ -5,19 +5,28 @@
 
 namespace _detail {
 
-	struct vtable {
-		void (*run)(void* ptr);
+	template<typename R>
+	struct vtable_p {
+		R(*run)(void* ptr);
 
 		void (*destroy)(void* ptr);
 		void (*clone)(void* storage, const void* ptr);
 		void (*move_clone)(void* storage, void* ptr);
 	};
 
+	template<typename R, typename ...Ts>
+	struct vtable_p<R(Ts...)> {
+		R(*run)(void* ptr, Ts ...args);
 
-	template<typename Callable>
-	constexpr vtable vtable_for{
-		[](void* ptr) {
-			static_cast<Callable*>(ptr)->operator()();
+		void (*destroy)(void* ptr);
+		void (*clone)(void* storage, const void* ptr);
+		void (*move_clone)(void* storage, void* ptr);
+	};
+
+	template<typename Callable, typename R, typename... Ts>
+	constexpr vtable_p<R(Ts...)> vtable_p_for{
+		[](void* ptr, Ts ...args) -> R {
+			return static_cast<Callable*>(ptr)->operator()(args...);
 		},
 
 		[](void* ptr) {
@@ -33,30 +42,37 @@ namespace _detail {
 		}
 	};
 
-}
+}; // namespace _detail
 
-class TaskWrapperComplete {
+template<typename R>
+class TaskWrapperP {
+	// This is just a base template class, so we can specialize it for a
+	// function signature. This one is not meant to be actually instantiated.
+};
+
+template<typename R, typename ...Ts>
+class TaskWrapperP<R(Ts...)> {
 public:
-	TaskWrapperComplete() : vtable_{ nullptr }
+	TaskWrapperP() : vtable_{ nullptr }
 	{}
 
-	TaskWrapperComplete(const TaskWrapperComplete& other) {
+	TaskWrapperP(const TaskWrapperP& other) {
 		other.vtable_->clone(&buf_, &other.buf_);
 		vtable_ = other.vtable_;
 	}
 
-	TaskWrapperComplete(TaskWrapperComplete&& other) noexcept {
+	TaskWrapperP(TaskWrapperP&& other) noexcept {
 		other.vtable_->move_clone(&buf_, &other.buf_);
 		vtable_ = other.vtable_;
 	}
 
-	~TaskWrapperComplete() {
+	~TaskWrapperP() {
 		if (vtable_) {
 			vtable_->destroy(&buf_);
 		}
 	}
 
-	TaskWrapperComplete& operator=(const TaskWrapperComplete& other) {
+	TaskWrapperP& operator=(const TaskWrapperP& other) {
 		if (vtable_) {
 			vtable_->destroy(&buf_);
 		}
@@ -67,7 +83,7 @@ public:
 		return *this;
 	}
 
-	TaskWrapperComplete& operator=(TaskWrapperComplete&& other) noexcept {
+	TaskWrapperP& operator=(TaskWrapperP&& other) noexcept {
 		if (vtable_) {
 			vtable_->destroy(&buf_);
 		}
@@ -79,19 +95,19 @@ public:
 	}
 
 	template<typename Callable>
-	TaskWrapperComplete(Callable c)
-		: vtable_{ &_detail::vtable_for<Callable> }
+	TaskWrapperP(Callable c)
+		: vtable_{ &_detail::vtable_p_for<Callable, R, Ts...> }
 	{
 		static_assert(sizeof(Callable) < sizeof(buf_),
 			"Wrapper buffer is too small.");
 		new(&buf_) Callable{ std::move(c) };
 	}
 
-	void operator()() {
-		vtable_->run(&buf_);
+	R operator()(Ts ...args) {
+		return vtable_->run(&buf_, args...);
 	}
 
 private:
 	std::aligned_storage_t<64> buf_;
-	const _detail::vtable* vtable_;
+	const _detail::vtable_p<R(Ts...)>* vtable_;
 };
