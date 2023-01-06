@@ -12,11 +12,13 @@ void VoiceMenuHandlerAsync::receiveInput(const MenuInput& data) {
 	// method to return 'std::suspend_always' the coroutine will be in
 	// suspended state after its creation, so its body only runs when
 	// it is explicitly resumed. Resume will happen in worker task.
-	worker_.addTask(process(data).h_);
+	worker_.addTask(processInput(data).h_);
 }
 
 void VoiceMenuHandlerAsync::receiveHangup(const HangUp& data) {
-	worker_.addTask(process(data).h_);
+	// Note that we use the same queue and worker thread to run normal
+	// tasks and coroutines.
+	worker_.addTask(TaskWrapper{ [this, data]() { processHangup(data); } });
 }
 
 VoiceMenuHandlerAsync::AwaitablePrompt
@@ -37,7 +39,7 @@ void VoiceMenuHandlerAsync::playVoiceMenuPrompt(
 	std::cout << "play prompt [" << prompt << "]\n";
 }
 
-CoroutineTask VoiceMenuHandlerAsync::process(const MenuInput data) {
+CoroutineTask VoiceMenuHandlerAsync::processInput(const MenuInput data) {
 	// co_await is compiled into the following sequence:
 	// if(!AwaitablePrompt::await_ready()) {
 	//   AwaitablePrompt::await_suspend(current_coro_handle);
@@ -57,10 +59,8 @@ void VoiceMenuHandlerAsync::cleanupCallData(const std::string& callId) {
 	std::cout << "!Coroutine! - call [" << callId << "] ended.\n";
 }
 
-CoroutineTask VoiceMenuHandlerAsync::process(const HangUp data) {
+void VoiceMenuHandlerAsync::processHangup(const HangUp data) {
 	cleanupCallData(data.callId);
-	co_return;
-	// Coroutine state will be destroyed after this point.
 }
 
 //-----------------------------------------------------------------------------
@@ -81,7 +81,10 @@ void VoiceMenuHandlerAsync::AwaitablePrompt::await_suspend(
 	fetcher_.fetch(
 		callId,
 		digit,
-		[this, h](const std::string& prompt, worker_type& worker) {
+		[this, h](
+			const std::string& prompt,
+			PromptFetcher::worker_type& worker
+		) {
 			// co_await resumes execution right before 'await_resume' call
 			// so it is safe to assign to prompt here because awaiter lifetime
 			// lasts until after 'await_resume' return.

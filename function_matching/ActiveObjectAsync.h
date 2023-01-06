@@ -5,11 +5,12 @@
 #include "InputStruct.h"
 #include "WorkerThread.h"
 #include "CoroutineTask.h"
+#include "TaskWrapper.h"
 #include "PromptFetcher.h"
 
 class VoiceMenuHandlerAsync {
 public:
-	using worker_type = Worker<std::coroutine_handle<>>;
+	using worker_type = Worker<TaskWrapper>;
 
 	explicit VoiceMenuHandlerAsync(PromptFetcher& fetcher);
 
@@ -38,10 +39,12 @@ private:
 	AwaitablePrompt fetchMenuSectionPrompt(char digit, const std::string& callId);
 	void playVoiceMenuPrompt(
 		const std::string& callId, const std::string& prompt);
-	CoroutineTask process(const MenuInput data);
+	// This is an asynchronous coroutine now.
+	CoroutineTask processInput(const MenuInput data);
 
 	void cleanupCallData(const std::string& callId);
-	CoroutineTask process(const HangUp data);
+	// This one remains as before but runs in the same thread as coroutines.
+	void processHangup(const HangUp data);
 
 	PromptFetcher& fetcher_;
 	worker_type worker_;

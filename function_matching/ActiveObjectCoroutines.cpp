@@ -7,11 +7,13 @@ void VoiceMenuHandlerCoroutines::receiveInput(const MenuInput& data) {
 	// method to return 'std::suspend_always' the coroutine will be in
 	// suspended state after its creation, so its body only runs when
 	// it is explicitly resumed. Resume will happen in worker task.
-	worker_.addTask( process(data).h_ );
+	worker_.addTask( processInput(data).h_ );
 }
 
 void VoiceMenuHandlerCoroutines::receiveHangup(const HangUp& data) {
-	worker_.addTask( process(data).h_ );
+	// Note that we use the same queue and worker thread to run normal
+	// tasks and coroutines.
+	worker_.addTask(TaskWrapper{ [this, data]() { processHangup(data); } });
 }
 
 std::string VoiceMenuHandlerCoroutines::fetchMenuSectionPrompt(
@@ -32,7 +34,7 @@ void VoiceMenuHandlerCoroutines::playVoiceMenuPrompt(
 	std::cout << "play prompt [" << prompt << "]\n";
 }
 
-CoroutineTask VoiceMenuHandlerCoroutines::process(const MenuInput data) {
+CoroutineTask VoiceMenuHandlerCoroutines::processInput(const MenuInput data) {
 	const auto prompt = fetchMenuSectionPrompt(data.digit, data.callId);
 	playVoiceMenuPrompt(data.callId, prompt);
 	co_return;
@@ -44,8 +46,6 @@ void VoiceMenuHandlerCoroutines::cleanupCallData(const std::string& callId) {
 	std::cout << "!Coroutine! - call [" << callId << "] ended.\n";
 }
 
-CoroutineTask VoiceMenuHandlerCoroutines::process(const HangUp data) {
+void VoiceMenuHandlerCoroutines::processHangup(const HangUp data) {
 	cleanupCallData(data.callId);
-	co_return;
-	// Coroutine state will be destroyed after this point.
 }

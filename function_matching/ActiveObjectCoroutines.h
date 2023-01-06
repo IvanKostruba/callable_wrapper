@@ -5,6 +5,7 @@
 #include "InputStruct.h"
 #include "WorkerThread.h"
 #include "CoroutineTask.h"
+#include "TaskWrapper.h"
 
 class VoiceMenuHandlerCoroutines {
 public:
@@ -16,10 +17,12 @@ private:
 	std::string fetchMenuSectionPrompt(char digit, const std::string& callId);
 	void playVoiceMenuPrompt(
 		const std::string& callId, const std::string& prompt);
-	CoroutineTask process(const MenuInput data);
+	// This is a coroutine now.
+	CoroutineTask processInput(const MenuInput data);
 
 	void cleanupCallData(const std::string& callId);
-	CoroutineTask process(const HangUp data);
+	// This one remains as before but runs in the same thread as coroutines.
+	void processHangup(const HangUp data);
 
-	Worker<std::coroutine_handle<>> worker_;
+	Worker<TaskWrapper> worker_;
 };
