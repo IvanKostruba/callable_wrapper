@@ -13,7 +13,7 @@ public:
 
 private:
 
-	std::string fetchMenuItemPrompt(char digit, const std::string& callId);
+	std::string fetchMenuSectionPrompt(char digit, const std::string& callId);
 	void playVoiceMenuPrompt(
 		const std::string& callId, const std::string& prompt);
 	CoroutineTask process(const MenuInput data);

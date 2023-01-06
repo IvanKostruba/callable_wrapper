@@ -35,7 +35,7 @@ private:
 
 	// This will be an asynchronous I/O function. It does not have to be a full
 	// coroutine, but have to return an awaiter.
-	AwaitablePrompt fetchMenuItemPrompt(char digit, const std::string& callId);
+	AwaitablePrompt fetchMenuSectionPrompt(char digit, const std::string& callId);
 	void playVoiceMenuPrompt(
 		const std::string& callId, const std::string& prompt);
 	CoroutineTask process(const MenuInput data);

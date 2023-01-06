@@ -1,17 +1,18 @@
 #pragma once
 
+#include <exception>
 #include <memory>
 #include <type_traits>
+
+// Here you can find a wrapper that can be parameterized just like
+// std::function, for example TaskWrapperP<int(float, double)>.
 
 namespace _detail {
 
 	template<typename R>
 	struct vtable_p {
-		R(*run)(void* ptr);
-
-		void (*destroy)(void* ptr);
-		void (*clone)(void* storage, const void* ptr);
-		void (*move_clone)(void* storage, void* ptr);
+		// This is just a base template class, so we can specialize it for a
+	    // function signature. This one is not meant to be instantiated.
 	};
 
 	template<typename R, typename ...Ts>
@@ -23,6 +24,9 @@ namespace _detail {
 		void (*move_clone)(void* storage, void* ptr);
 	};
 
+	// This template receive return type and arguments list from TaskWrapperP
+	// where it's instantiated. They are defined by TaskWrapperP template
+	// parameters.
 	template<typename Callable, typename R, typename... Ts>
 	constexpr vtable_p<R(Ts...)> vtable_p_for{
 		[](void* ptr, Ts ...args) -> R {
@@ -50,6 +54,7 @@ class TaskWrapperP {
 	// function signature. This one is not meant to be actually instantiated.
 };
 
+// Template specialization that matches with function signature.
 template<typename R, typename ...Ts>
 class TaskWrapperP<R(Ts...)> {
 public:
@@ -104,6 +109,9 @@ public:
 	}
 
 	R operator()(Ts ...args) {
+		if (!vtable_) {
+			throw std::runtime_error{"Calling unitialized function wrapper!"};
+		}
 		return vtable_->run(&buf_, args...);
 	}
 

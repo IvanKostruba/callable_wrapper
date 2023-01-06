@@ -14,15 +14,15 @@ public:
 
 private:
 
-	std::string fetchMenuItemPrompt(char digit, const std::string& callId);
+	std::string fetchMenuSectionPrompt(char digit, const std::string& callId);
 	void playVoiceMenuPrompt(
 		const std::string& callId, const std::string& prompt);
-	// This method will do actuall processing of user input by calling the
+	// This method will do actual processing of user input by calling the
 	// two functions from above.
 	void processInput(const MenuInput& data);
 
 	void cleanupCallData(const std::string& callId);
-	// This method will do actuall processing of hangup by calling the
+	// This method will do actual processing of hangup by calling the
 	// function from above.
 	void processHangup(const HangUp& data);
 

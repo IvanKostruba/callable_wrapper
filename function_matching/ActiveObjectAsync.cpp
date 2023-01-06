@@ -20,12 +20,11 @@ void VoiceMenuHandlerAsync::receiveHangup(const HangUp& data) {
 }
 
 VoiceMenuHandlerAsync::AwaitablePrompt
-VoiceMenuHandlerAsync::fetchMenuItemPrompt(
+VoiceMenuHandlerAsync::fetchMenuSectionPrompt(
 	char digit,
 	const std::string& callId
 ) {
-	// Given the current state and user input, go to next menu item.
-	std::cout << "!Coroutine! - in call [" << callId
+	std::cout << "!Coroutine! - in the call [" << callId
 		<< "] menu item '" << digit << "' selected.\n";
 	return AwaitablePrompt{ callId, digit, fetcher_ };
 }
@@ -46,8 +45,8 @@ CoroutineTask VoiceMenuHandlerAsync::process(const MenuInput data) {
 	//   // may be different.
 	// }
 	// AwaitablePrompt::await_resume()
-	// whatewer await_resume returns becomes the result of co_await
-	const auto prompt = co_await fetchMenuItemPrompt(data.digit, data.callId);
+	// whatever await_resume returns becomes the result of co_await
+	const auto prompt = co_await fetchMenuSectionPrompt(data.digit, data.callId);
 	playVoiceMenuPrompt(data.callId, prompt);
 	co_return;
 	// Coroutine state will be destroyed after this point.
@@ -66,12 +65,14 @@ CoroutineTask VoiceMenuHandlerAsync::process(const HangUp data) {
 
 //-----------------------------------------------------------------------------
 
+// This will be called first when the compiler sees a co_await expression.
 bool VoiceMenuHandlerAsync::AwaitablePrompt::await_ready() {
 	// If PromptFetcher had a cache, we could check it here and skip suspension
 	// of the coroutine by returning 'true'.
 	return false;
 }
 
+// This will be called second.
 void VoiceMenuHandlerAsync::AwaitablePrompt::await_suspend(
 	std::coroutine_handle<> h
 ) {
@@ -90,7 +91,7 @@ void VoiceMenuHandlerAsync::AwaitablePrompt::await_suspend(
 			// and then the fetcher would be responsible for scheduling it.
 			worker.addTask(h);
 			// from this point awaiter may be deleted at any moment so we
-			// should not touch it (this) anymore.
+			// should not touch it (this* pointer) anymore.
 		}
 	);
 }

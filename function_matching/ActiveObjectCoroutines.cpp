@@ -14,12 +14,12 @@ void VoiceMenuHandlerCoroutines::receiveHangup(const HangUp& data) {
 	worker_.addTask( process(data).h_ );
 }
 
-std::string VoiceMenuHandlerCoroutines::fetchMenuItemPrompt(
+std::string VoiceMenuHandlerCoroutines::fetchMenuSectionPrompt(
 	char digit,
 	const std::string& callId
 ) {
 	// Given the current state and user input, go to next menu item.
-	std::cout << "!Coroutine! - in call [" << callId
+	std::cout << "!Coroutine! - in the call [" << callId
 		<< "] menu item '" << digit << "' selected.\n";
 	return callId + "_prompt_" + digit;
 }
@@ -33,7 +33,7 @@ void VoiceMenuHandlerCoroutines::playVoiceMenuPrompt(
 }
 
 CoroutineTask VoiceMenuHandlerCoroutines::process(const MenuInput data) {
-	const auto prompt = fetchMenuItemPrompt(data.digit, data.callId);
+	const auto prompt = fetchMenuSectionPrompt(data.digit, data.callId);
 	playVoiceMenuPrompt(data.callId, prompt);
 	co_return;
 	// Coroutine state will be destroyed after this point.

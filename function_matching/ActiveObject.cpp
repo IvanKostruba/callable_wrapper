@@ -14,12 +14,12 @@ void VoiceMenuHandler::receiveHangup(const HangUp& data) {
 	worker_.addTask(TaskWrapper{[this, data]() { processHangup(data); } });
 }
 
-std::string VoiceMenuHandler::fetchMenuItemPrompt(
+std::string VoiceMenuHandler::fetchMenuSectionPrompt(
 	char digit,
 	const std::string& callId
 ) {
-	// Given the current state and user input, go to next menu item.
-	std::cout << "in call [" << callId << "] menu item '"
+	// Given the current state and user input, go to the next menu item.
+	std::cout << "in the call [" << callId << "] menu item '"
 		<< digit << "' selected.\n";
 	return callId + "_prompt_" + digit;
 }
@@ -28,12 +28,12 @@ void VoiceMenuHandler::playVoiceMenuPrompt(
 	const std::string& callId,
 	const std::string& prompt
 ) {
-	// Command media server to start playing current menu prompt.
+	// Command media server to start playing the current menu prompt.
 	std::cout << "play prompt [" << prompt << "]\n";
 }
 
 void VoiceMenuHandler::processInput(const MenuInput& data) {
-	const auto prompt = fetchMenuItemPrompt(data.digit, data.callId);
+	const auto prompt = fetchMenuSectionPrompt(data.digit, data.callId);
 	playVoiceMenuPrompt(data.callId, prompt);
 }
 

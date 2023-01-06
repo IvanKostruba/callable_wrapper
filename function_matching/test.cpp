@@ -41,14 +41,11 @@ int main(int argc, char** argv) {
 
 	VoiceMenuHandler menuHandler;
 	std::thread sender([&menuHandler]() {
-		menuHandler.receiveInput(
-			MenuInput{ '2', "call_1@ip_addr" });
+		menuHandler.receiveInput(MenuInput{ '2', "call_1@ip_addr" });
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
-		menuHandler.receiveInput(
-			MenuInput{ '1', "call_2@ip_addr" });
+		menuHandler.receiveInput(MenuInput{ '1', "call_2@ip_addr" });
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
-		menuHandler.receiveHangup(
-			HangUp{ "call_1@ip_addr" });
+		menuHandler.receiveHangup(HangUp{ "call_1@ip_addr" });
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	});
 	sender.join();

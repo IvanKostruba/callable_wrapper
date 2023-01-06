@@ -23,7 +23,7 @@ struct CoroutineTask {
 		// We don't want to suspend the coroutine when it reaches co_return.
 		std::suspend_never final_suspend() noexcept { return {}; }
 		// Our coroutine does not return any values, so it's promise_type
-		// defines 'return_void' method, otherwise 'return_value' is necessary. 
+		// defines the 'return_void' method, otherwise 'return_value' is necessary.
 		void return_void() {}
 		void unhandled_exception() {}
 	};
