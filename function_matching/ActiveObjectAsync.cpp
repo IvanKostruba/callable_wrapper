@@ -77,7 +77,7 @@ void VoiceMenuHandlerAsync::AwaitablePrompt::await_suspend(
 	std::coroutine_handle<> h
 ) {
 	// When this method is called the coroutine is already suspended, so we can
-	// pass it's handle elsewhere.
+	// pass its handle elsewhere.
 	fetcher_.fetch(
 		callId,
 		digit,
@@ -94,7 +94,8 @@ void VoiceMenuHandlerAsync::AwaitablePrompt::await_suspend(
 			// and then the fetcher would be responsible for scheduling it.
 			worker.addTask(h);
 			// from this point awaiter may be deleted at any moment so we
-			// should not touch it (this* pointer) anymore.
+			// should not touch it (this* pointer) anymore. So assigning to
+			// the prompt_ here would be potential undefined behavior.
 		}
 	);
 }
